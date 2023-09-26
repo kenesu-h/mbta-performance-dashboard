@@ -1,0 +1,10 @@
+FROM node:16.20.1
+
+WORKDIR /app
+COPY . .
+
+EXPOSE 5173
+
+RUN npm ci
+
+CMD ["npm", "run", "dev"]

@@ -1,0 +1,16 @@
+FROM golang:1.21
+
+WORKDIR /app
+COPY . .
+
+EXPOSE 8080
+
+RUN apt-get update && apt-get install -y postgresql-client
+RUN curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/releases/latest/download/dbmate-linux-amd64
+RUN chmod +x /usr/local/bin/dbmate
+RUN go get -d -v ./...
+
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+ENTRYPOINT ["/app/entrypoint.sh"]

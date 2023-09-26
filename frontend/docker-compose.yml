@@ -1,0 +1,25 @@
+version: "3"
+services:
+  prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+    ports:
+      - "80:80"
+
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./:/app
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=development
+    ports:
+      - "5173:5173"
