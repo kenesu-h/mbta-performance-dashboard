@@ -14,6 +14,7 @@ services:
       - .env
     environment:
       ENVIRONMENT: production
+      GIN_MODE: release
       POSTGRES_HOST: database
       POSTGRES_PORT: 5432
       POSTGRES_DB: postgres
