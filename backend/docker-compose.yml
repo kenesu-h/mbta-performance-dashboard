@@ -6,11 +6,14 @@ services:
       dockerfile: Dockerfile
     depends_on:
       - database
-    volumes:
+      - nginx
+    volumes: 
       - ./:/app
+      - /etc/letsencrypt:/etc/letsencrypt
     env_file:
       - .env
     environment:
+      ENVIRONMENT: production
       POSTGRES_HOST: database
       POSTGRES_PORT: 5432
       POSTGRES_DB: postgres
@@ -49,3 +52,13 @@ services:
       POSTGRES_PASSWORD: postgres
     ports:
       - "43780:5432"
+
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - /etc/letsencrypt:/etc/letsencrypt
+      - /var/www/letsencrypt:/var/www/letsencrypt
+    ports:
+      - "80:80"
+      - "443:443"

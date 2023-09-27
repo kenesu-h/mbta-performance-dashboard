@@ -10,9 +10,3 @@
 1. Create a .env containing the following variable:
    - VITE_BACKEND_URL: Required
 2. `docker-compose up -d dev`
-
-## Deployment
-
-```
-docker-compose run -d prod
-```

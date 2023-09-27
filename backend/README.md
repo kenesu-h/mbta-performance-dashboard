@@ -19,12 +19,6 @@
           https://www.mbta.com/developers/v3-api/best-practices).
 2. `docker-compose up -d dev`
 
-## Deployment
-
-```
-docker-compose up -d prod
-```
-
 ## Caching
 
 The MBTA's Performance API only allows you to query up to 90 days worth of data, while restricting
