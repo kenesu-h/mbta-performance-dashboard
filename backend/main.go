@@ -160,13 +160,5 @@ func main() {
 		traveltimes.HandleFetch(c, db)
 	})
 
-	if os.Getenv("ENVIRONMENT") == "production" {
-		r.RunTLS(
-			":443",
-			fmt.Sprintf("/etc/letsencrypt/live/%s/fullchain.pem", os.Getenv("DOMAIN")),
-			fmt.Sprintf("/etc/letsencrypt/live/%s/privkey.pem", os.Getenv("DOMAIN")),
-		)
-	} else {
-		r.Run()
-	}
+	r.Run()
 }

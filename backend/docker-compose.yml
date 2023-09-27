@@ -9,11 +9,9 @@ services:
       - nginx
     volumes: 
       - ./:/app
-      - /etc/letsencrypt:/etc/letsencrypt
     env_file:
       - .env
     environment:
-      ENVIRONMENT: production
       GIN_MODE: release
       POSTGRES_HOST: database
       POSTGRES_PORT: 5432
