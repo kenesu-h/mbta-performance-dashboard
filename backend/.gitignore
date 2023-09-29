@@ -28,3 +28,6 @@ pgdata/
 
 # LSP configs
 .sqllsrc.json
+
+# Binary as main
+main
