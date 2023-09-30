@@ -9,6 +9,10 @@ import mapStore from "@/stores/map";
 import type { Dwell, Headway, TravelTime } from "@/types";
 import { DataCategory, SelectionMode } from "@/types";
 
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
 function formatPointTooltip({ seriesIndex, dataPointIndex, w }: any): string {
   return `
     <div style='padding: 0.6em'>
@@ -39,14 +43,6 @@ function formatPointTooltip({ seriesIndex, dataPointIndex, w }: any): string {
     </div>
   `;
 }
-
-const isMobile = computed(() => {
-  return window.innerWidth <= 992;
-});
-
-const chartHeight = computed(() => {
-  return window.innerWidth <= 992 ? "240px" : "400px";
-});
 
 const series = computed(() => {
   switch (dataStore.selectedCategory) {
@@ -411,8 +407,8 @@ const totalPoints = computed(() => {
           @click="async () => await dataStore.fetchData()"
         />
       </div>
-      <div v-else>
-        <div class="flex-row gap">
+      <div v-else class="flex-column gap">
+        <div class="flex-row flex-wrap gap">
           <Button
             label="Headways"
             size="small"
@@ -423,9 +419,17 @@ const totalPoints = computed(() => {
                 await dataStore.fetchData();
               }
             "
-          />
+          >
+            Headways
+            <Badge
+              v-tooltip.bottom="
+                'The amount of time between the departures of the previous and ' +
+                'current trains at a stop. The higher it is, the worse it is.'
+              "
+              value="?"
+            />
+          </Button>
           <Button
-            label="Dwells"
             size="small"
             :disabled="dataStore.selectedCategory === DataCategory.Dwell"
             @click="
@@ -434,7 +438,15 @@ const totalPoints = computed(() => {
                 await dataStore.fetchData();
               }
             "
-          />
+          >
+            Dwell
+            <Badge
+              v-tooltip.bottom="
+                'The amount of time a train spent stationary at a stop.'
+              "
+              value="?"
+            />
+          </Button>
           <Button
             label="Travel Times"
             size="small"
@@ -445,10 +457,16 @@ const totalPoints = computed(() => {
                 await dataStore.fetchData();
               }
             "
-          />
+          >
+            Travel Times
+            <Badge
+              v-tooltip.bottom="'The travel time between two stops.'"
+              value="?"
+            />
+          </Button>
         </div>
         <ApexChart
-          :height="chartHeight"
+          height="400px"
           :series="series"
           :options="{
             chart: {
@@ -474,6 +492,14 @@ const totalPoints = computed(() => {
             },
             stroke: {
               width: [1, 1],
+            },
+            plotOptions: {
+              candlestick: {
+                colors: {
+                  upward: '#EF403C',
+                  downward: '#00B746',
+                },
+              },
             },
             tooltip: {
               shared: true,
@@ -579,71 +605,97 @@ const totalPoints = computed(() => {
             {{ totalPoints }}</span
           >
         </div>
-        <div class="flex-row gap w-100" :class="{ 'flex-wrap': isMobile }">
-          <div class="p-inputgroup">
-            <span class="p-inputgroup-addon">
-              <i class="pi pi-clock"></i>
-            </span>
-            <InputNumber
-              v-tooltip.bottom="'The time interval each data point represents.'"
-              :model-value="dataStore.period"
-              input-id="period-input"
-              prefix="Period: "
-              suffix=" hours"
-              :class="{
-                'p-invalid': dataStore.period < 4 || dataStore.period > 15 * 24,
-              }"
-              @update:model-value="
-                (value: number) => {
-                  if (value >= 4 && value <= 15 * 24) {
-                    dataStore.period = value;
+        <div
+          class="flex-row gap w-100"
+          :class="{ 'flex-wrap': appStore.width <= 992 }"
+        >
+          <div class="flex-column gap w-100">
+            <div class="flex-row gap">
+              <label for="period" :style="{ 'font-weight': 'bold' }"
+                >Period</label
+              >
+              <Badge
+                v-tooltip.right="
+                  'The amount of time each data point represents.'
+                "
+                value="?"
+              />
+            </div>
+            <div class="p-inputgroup">
+              <span class="p-inputgroup-addon">
+                <i class="pi pi-clock"></i>
+              </span>
+              <InputNumber
+                :model-value="dataStore.period"
+                input-id="period"
+                suffix=" hours"
+                :class="{
+                  'p-invalid':
+                    dataStore.period < 4 || dataStore.period > 15 * 24,
+                }"
+                @update:model-value="
+                  (value: number) => {
+                    if (value >= 4 && value <= 15 * 24) {
+                      dataStore.period = value;
+                    }
                   }
-                }
-              "
-            />
+                "
+              />
+            </div>
           </div>
-          <div class="p-inputgroup">
-            <span class="p-inputgroup-addon">
-              <i class="pi pi-map"></i>
-            </span>
-            <InputText
-              v-tooltip.bottom="
-                'The station to query travel times to. Only available when querying for Travel Times.'
-              "
-              :model-value="`Destination: ${
-                dataStore.selectedDestination
-                  ? dataStore.selectedDestination?.stop.name + ' Station'
-                  : 'Choose one!'
-              }`"
-              input-id="period-input"
-              disabled
-            />
-            <ToggleButton
-              :model-value="mapStore.selectionMode === SelectionMode.Normal"
-              on-icon="pi pi-map-marker"
-              on-label=""
-              off-icon="pi pi-times"
-              off-label=""
-              :disabled="dataStore.selectedCategory !== DataCategory.TravelTime"
-              :style="{ 'z-index': 1001 }"
-              @update:model-value="
-                async () => {
-                  switch (mapStore.selectionMode) {
-                    case SelectionMode.Normal:
-                      appStore.blocked = true;
-                      mapStore.selectionMode = SelectionMode.Destination;
-                      break;
-                    case SelectionMode.Destination:
-                      appStore.blocked = false;
-                      mapStore.selectionMode = SelectionMode.Normal;
-                      break;
-                    default:
-                      console.error('Invalid selection mode');
-                      return;
+          <div class="flex-column gap w-100">
+            <div class="flex-row gap">
+              <label for="period" :style="{ 'font-weight': 'bold' }"
+                >Destination</label
+              >
+              <Badge
+                v-tooltip.right="
+                  'The dashboard will retrieve travel times from the current ' +
+                  'station to whatever destination you select.'
+                "
+                value="?"
+              />
+            </div>
+            <div class="p-inputgroup">
+              <span class="p-inputgroup-addon">
+                <i class="pi pi-map"></i>
+              </span>
+              <InputText
+                :model-value="`Destination: ${
+                  dataStore.selectedDestination
+                    ? dataStore.selectedDestination?.stop.name + ' Station'
+                    : 'Choose one!'
+                }`"
+                input-id="period-input"
+                disabled
+              />
+              <ToggleButton
+                :model-value="mapStore.selectionMode === SelectionMode.Normal"
+                on-icon="pi pi-map-marker"
+                on-label=""
+                off-icon="pi pi-times"
+                off-label=""
+                :style="{ 'z-index': 1001 }"
+                @update:model-value="
+                  async () => {
+                    switch (mapStore.selectionMode) {
+                      case SelectionMode.Normal:
+                        appStore.blocked = true;
+                        mapStore.selectionMode = SelectionMode.Destination;
+                        scrollToTop();
+                        break;
+                      case SelectionMode.Destination:
+                        appStore.blocked = false;
+                        mapStore.selectionMode = SelectionMode.Normal;
+                        break;
+                      default:
+                        console.error('Invalid selection mode');
+                        return;
+                    }
                   }
-                }
-              "
-            />
+                "
+              />
+            </div>
           </div>
         </div>
       </div>

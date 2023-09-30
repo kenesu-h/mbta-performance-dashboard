@@ -3,7 +3,6 @@ import { useDialog } from "primevue/usedialog";
 
 import AboutDialog from "@/components/dialogs/AboutDialog.vue";
 import UpdatesDialog from "@/components/dialogs/UpdatesDialog.vue";
-import GlossaryDialog from "@/components/dialogs/GlossaryDialog.vue";
 import { largeDialogProps } from "@/utils";
 
 const dialog = useDialog();
@@ -24,14 +23,6 @@ const dialog = useDialog();
         icon: 'pi pi-fw pi-info-circle',
         command: () =>
           dialog.open(AboutDialog, { props: largeDialogProps('About', true) }),
-      },
-      {
-        label: 'Glossary',
-        icon: 'pi pi-fw pi-book',
-        command: () =>
-          dialog.open(GlossaryDialog, {
-            props: largeDialogProps('Glossary', true),
-          }),
       },
       {
         label: 'Updates',

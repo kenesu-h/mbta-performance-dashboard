@@ -25,9 +25,11 @@ const routes = computed(() => {
   });
 });
 
-const panelWidth = computed(() => {
-  return window.innerWidth <= 992 ? "100%" : "50%";
-});
+function scrollToDataContainer() {
+  document.getElementById("data-container")?.scrollIntoView({
+    behavior: "smooth",
+  });
+}
 </script>
 
 <template>
@@ -36,7 +38,7 @@ const panelWidth = computed(() => {
     :pt="{
       root: (_) => ({
         style: {
-          width: panelWidth,
+          width: appStore.width <= 992 ? '100%' : '50%',
           height: '100%',
           display: 'flex',
           'flex-direction': 'column',
@@ -92,6 +94,7 @@ const panelWidth = computed(() => {
                 }
                 try {
                   await dataStore.fetchData();
+                  scrollToDataContainer();
                 } catch (err) {
                   // Since fetchData sets dataStore.error, let the div in DataPanel render it
                 }
@@ -103,7 +106,6 @@ const panelWidth = computed(() => {
                   life: 3000,
                 });
               }
-              await dataStore.fetchData();
             }
           "
         />

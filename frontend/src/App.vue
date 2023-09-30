@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useDialog } from "primevue/usedialog";
-import { computed, onMounted } from "vue";
+import { onMounted, onUnmounted } from "vue";
 
 import "leaflet/dist/leaflet.css";
 import dayjs from "dayjs";
@@ -10,7 +10,6 @@ import timezone from "dayjs/plugin/timezone";
 import AppMenubar from "@/components/AppMenubar.vue";
 import MapErrorDialog from "@/components/dialogs/MapErrorDialog.vue";
 import MapLoadingDialog from "@/components/dialogs/MapLoadingDialog.vue";
-import MobileWarningDialog from "@/components/dialogs/MobileWarningDialog.vue";
 import DataPanel from "@/components/panels/DataPanel.vue";
 import MapPanel from "@/components/panels/MapPanel.vue";
 import StationPanel from "@/components/panels/StationPanel.vue";
@@ -24,7 +23,12 @@ dayjs.extend(timezone);
 
 const dialog = useDialog();
 
+function handleWindowResize() {
+  appStore.width = window.innerWidth;
+}
+
 onMounted(async () => {
+  appStore.width = window.innerWidth;
   const loadingDialogRef = dialog.open(MapLoadingDialog, {
     props: smallDialogProps("Loading", false),
   });
@@ -32,20 +36,16 @@ onMounted(async () => {
   try {
     await mapStore.fetchMapData();
     loadingDialogRef.close();
-
-    if (window.innerWidth <= 768) {
-      dialog.open(MobileWarningDialog, {
-        props: mediumDialogProps("Warning", true),
-      });
-    }
   } catch (err) {
     loadingDialogRef.close();
     dialog.open(MapErrorDialog, { props: mediumDialogProps("Error", false) });
   }
+
+  window.addEventListener("resize", handleWindowResize);
 });
 
-const isMobile = computed(() => {
-  return window.innerWidth <= 768;
+onUnmounted(async () => {
+  window.removeEventListener("resize", handleWindowResize);
 });
 </script>
 
@@ -54,6 +54,7 @@ const isMobile = computed(() => {
   <DynamicDialog />
 
   <!-- Block UI for when selecting a destination for travel times -->
+  <!-- TODO: Allow scrolling even with Block UI, maybe scroll directly to the element -->
   <BlockUI
     :blocked="appStore.blocked"
     :base-z-index="1000"
@@ -63,13 +64,20 @@ const isMobile = computed(() => {
 
   <AppMenubar />
 
-  <div class="flex-row gap h-100" :class="{ 'flex-wrap': isMobile }">
+  <div
+    class="flex-row gap h-100"
+    :class="{ 'flex-wrap': appStore.width <= 992 }"
+  >
     <MapPanel />
 
     <div
       v-if="dataStore.selectedStop"
-      class="flex-column flex-grow gap h-100"
-      :style="{ 'justify-content': 'start' }"
+      id="data-container"
+      class="flex-column gap h-100"
+      :style="{
+        width: appStore.width <= 992 ? '100%' : '50%',
+        'justify-content': 'start',
+      }"
     >
       <StationPanel />
       <DataPanel />

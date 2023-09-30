@@ -5,7 +5,6 @@ import { inject, Ref } from "vue";
 
 import MapErrorDialog from "@/components/dialogs/MapErrorDialog.vue";
 import MapLoadingDialog from "@/components/dialogs/MapLoadingDialog.vue";
-import MobileWarningDialog from "@/components/dialogs/MobileWarningDialog.vue";
 import store from "@/stores/map";
 import { mediumDialogProps, smallDialogProps } from "@/utils";
 
@@ -24,12 +23,6 @@ async function handleClick() {
   try {
     await store.fetchMapData();
     loadingDialogRef.close();
-
-    if (window.innerWidth <= 768) {
-      dialog.open(MobileWarningDialog, {
-        props: mediumDialogProps("Warning", true),
-      });
-    }
   } catch (err) {
     loadingDialogRef.close();
     dialog.open(MapErrorDialog, { props: mediumDialogProps("Error", false) });

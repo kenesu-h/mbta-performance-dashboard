@@ -94,3 +94,8 @@ button:focus-visible {
 svg.apexcharts-svg {
   background: transparent !important;
 }
+
+.p-disabled,
+.p-disabled * {
+  pointer-events: all !important;
+}
