@@ -54,7 +54,6 @@ onUnmounted(async () => {
   <DynamicDialog />
 
   <!-- Block UI for when selecting a destination for travel times -->
-  <!-- TODO: Allow scrolling even with Block UI, maybe scroll directly to the element -->
   <BlockUI
     :blocked="appStore.blocked"
     :base-z-index="1000"
@@ -86,7 +85,7 @@ onUnmounted(async () => {
       v-else
       class="flex-column flex-grow justify-center text-align-center h-100"
     >
-      Click on a station on the map to get started!
+      Select a map marker or search for a station to get started!
     </div>
   </div>
 </template>

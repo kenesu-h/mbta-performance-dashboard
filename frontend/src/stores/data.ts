@@ -89,24 +89,32 @@ const store = reactive<Store>({
       throw new Error("Already loading another station's data");
     }
 
-    if (this.selectedStop) {
-      if (this.selectedStop.routeID !== routeID) {
-        this.toastMessage =
-          "That station isn't on the same route as your selected station.";
-        throw new Error("Station not on same route");
-      }
-
-      if (
-        this.selectedStop.stop.name === stop.name &&
-        this.selectedStop.routeID === routeID
-      ) {
-        this.toastMessage =
-          "You can't choose the station you've already selected.";
-        throw new Error("Already at selected station");
-      }
+    if (!this.selectedStop) {
+      throw new Error("No station selected");
     }
 
-    this.selectedDestination = { stop, routeID };
+    if (
+      this.selectedStop.routeID !== routeID &&
+      !stop.routeIDs.has(this.selectedStop.routeID)
+    ) {
+      this.toastMessage =
+        "That station isn't on the same route as your selected station.";
+      throw new Error("Station not on same route");
+    }
+
+    if (
+      this.selectedStop.stop.name === stop.name &&
+      this.selectedStop.routeID === routeID
+    ) {
+      this.toastMessage =
+        "You can't choose the station you've already selected.";
+      throw new Error("Already at selected station");
+    }
+
+    this.selectedDestination = {
+      stop,
+      routeID: this.selectedStop.routeID,
+    };
     this.travelTimes.length = 0;
   },
 

@@ -10,6 +10,9 @@ export const MAP_BOUNDS = latLngBounds(
   [42.192049, -71.264843],
   [42.476643, -70.949545],
 );
+
+export const DETAILED_VIEW = "Toggle Detailed View";
+
 export const PANEL_STYLE = {
   root: (_: any) => ({
     style: {

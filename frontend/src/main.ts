@@ -7,6 +7,8 @@ import "primeicons/primeicons.css";
 
 import PrimeVue from "primevue/config";
 
+import Accordion from "primevue/accordion";
+import AccordionTab from "primevue/accordiontab";
 import Badge from "primevue/badge";
 import BlockUI from "primevue/blockui";
 import Button from "primevue/button";
@@ -15,6 +17,7 @@ import Column from "primevue/column";
 import DataTable from "primevue/datatable";
 import Dialog from "primevue/dialog";
 import DialogService from "primevue/dialogservice";
+import Dropdown from "primevue/dropdown";
 import DynamicDialog from "primevue/dynamicdialog";
 import InputNumber from "primevue/inputnumber";
 import InputText from "primevue/inputtext";
@@ -37,6 +40,8 @@ app.use(PrimeVue);
 app.use(DialogService);
 app.use(ToastService);
 
+app.component("Accordion", Accordion);
+app.component("AccordionTab", AccordionTab);
 app.component("Badge", Badge);
 app.component("BlockUI", BlockUI);
 app.component("Button", Button);
@@ -44,6 +49,7 @@ app.component("Checkbox", Checkbox);
 app.component("Column", Column);
 app.component("DataTable", DataTable);
 app.component("Dialog", Dialog);
+app.component("Dropdown", Dropdown);
 app.component("DynamicDialog", DynamicDialog);
 app.component("InputNumber", InputNumber);
 app.component("InputText", InputText);

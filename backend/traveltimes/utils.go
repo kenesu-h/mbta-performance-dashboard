@@ -15,7 +15,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 
   "github.com/mbta-performance-dashboard/consts"
   "github.com/mbta-performance-dashboard/utils"
@@ -242,27 +242,26 @@ func HandleCache(c *gin.Context, db *sql.DB, mutex *sync.Mutex) {
 	}
 
 	statement = "INSERT INTO travel_time (from_stop_id, to_stop_id, route_id, direction, dep_dt, "+
-    "arr_dt, travel_time_sec, benchmark_travel_time_sec) VALUES"
+    "arr_dt, travel_time_sec, benchmark_travel_time_sec) SELECT " +
+    "unnest($1::text[]) AS from_stop_id, " +
+    "unnest($2::text[]) AS to_stop_id, " +
+    "unnest($3::text[]) AS route_id, " +
+    "unnest($4::boolean[]) AS direction, " +
+    "TO_TIMESTAMP(unnest($5::int[])) AS dep_dt, " +
+    "TO_TIMESTAMP(unnest($6::int[])) AS arr_dt, " +
+    "unnest($7::int[]) AS travel_time_sec, " +
+    "unnest($8::int[]) AS benchmark_travel_time_sec"
 
-	params = []any{}
-	var values []string = []string{}
+  var paramFromStopIDs []string = []string{}
+  var paramToStopIDs []string = []string{}
+  var paramRouteIDs []string = []string{}
+  var paramDirections []bool = []bool{}
+  var paramDepDts []int = []int{}
+  var paramArrDts []int = []int{}
+  var paramTravelTimeSecs []int = []int{}
+  var paramBenchmarkTravelTimeSecs []int = []int{}
+
 	for i := 0; i < len(travelTimes); i++ {
-		start := (i * 8) + 1
-		values = append(
-			values,
-			fmt.Sprintf(
-				" ($%d, $%d, $%d, $%d, TO_TIMESTAMP($%d), TO_TIMESTAMP($%d), $%d, $%d)",
-				start,
-				start+1,
-				start+2,
-				start+3,
-				start+4,
-				start+5,
-        start+6,
-        start+7,
-			),
-		)
-
 		convertedDirection, err := strconv.Atoi(travelTimes[i].Direction)
 		if err != nil {
 			panic(fmt.Sprintf("Error converting direction to integer: %v", err))
@@ -284,23 +283,30 @@ func HandleCache(c *gin.Context, db *sql.DB, mutex *sync.Mutex) {
 			panic(fmt.Sprintf("Error converting benchmark travel time seconds to integer: %v", err))
 		}
 
-		params = append(
-			params,
-			[]any{
-				travelTimes[i].FromStopID,
-        travelTimes[i].ToStopID,
-				travelTimes[i].RouteID,
-				convertedDirection == 1,
-				convertedDepDt,
-				convertedArrDt,
-				convertedTravelTimeSec,
-        convertedBenchmarkTravelTimeSec,
-			}...,
-		)
+    paramFromStopIDs = append(paramFromStopIDs, travelTimes[i].FromStopID)
+    paramToStopIDs = append(paramToStopIDs, travelTimes[i].ToStopID)
+    paramRouteIDs = append(paramRouteIDs, travelTimes[i].RouteID)
+    paramDirections = append(paramDirections, convertedDirection == 1)
+    paramDepDts = append(paramDepDts, convertedDepDt)
+    paramArrDts = append(paramArrDts, convertedArrDt)
+    paramTravelTimeSecs = append(paramTravelTimeSecs, convertedTravelTimeSec)
+    paramBenchmarkTravelTimeSecs = append(
+      paramBenchmarkTravelTimeSecs,
+      convertedBenchmarkTravelTimeSec,
+    )
 	}
-	statement += strings.Join(values, ",")
 
-	_, err = db.Exec(statement, params...)
+	_, err = db.Exec(
+    statement,
+    pq.Array(paramFromStopIDs),
+    pq.Array(paramToStopIDs),
+    pq.Array(paramRouteIDs),
+    pq.Array(paramDirections),
+    pq.Array(paramDepDts),
+    pq.Array(paramArrDts),
+    pq.Array(paramTravelTimeSecs),
+    pq.Array(paramBenchmarkTravelTimeSecs),
+  )
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"data": fmt.Sprintf("Error inserting travel times: %v", err),

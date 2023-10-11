@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DropdownChangeEvent } from "primevue/dropdown";
 import { useDialog } from "primevue/usedialog";
 import { useToast } from "primevue/usetoast";
 import { computed } from "vue";
@@ -15,9 +16,48 @@ import dataStore from "@/stores/data";
 import mapStore from "@/stores/map";
 import type { Route, RouteID, Stop } from "@/types";
 import { SelectionMode } from "@/types";
+import { smallDialogProps } from "@/utils";
 
 const dialog = useDialog();
 const toast = useToast();
+
+async function selectStop(stop: Stop, routeID: RouteID) {
+  try {
+    switch (mapStore.selectionMode) {
+      case SelectionMode.Normal:
+        await dataStore.selectStop(stop, routeID);
+        dataStore.selectedDestination = null;
+        break;
+      case SelectionMode.Destination:
+        await dataStore.selectDestination(stop, routeID);
+        appStore.blocked = false;
+        mapStore.selectionMode = SelectionMode.Normal;
+        break;
+      default:
+        console.error("Invalid selection mode");
+        return;
+    }
+    try {
+      await dataStore.fetchData();
+      scrollToDataContainer();
+    } catch (err) {
+      // Since fetchData sets dataStore.error, let the div in DataPanel render it
+    }
+  } catch (err) {
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: dataStore.toastMessage,
+      life: 3000,
+    });
+  }
+}
+
+function scrollToDataContainer() {
+  document.getElementById("data-container")?.scrollIntoView({
+    behavior: "smooth",
+  });
+}
 
 const routes = computed(() => {
   return ROUTE_IDS.map((routeID) => {
@@ -25,11 +65,13 @@ const routes = computed(() => {
   });
 });
 
-function scrollToDataContainer() {
-  document.getElementById("data-container")?.scrollIntoView({
-    behavior: "smooth",
+const stops = computed(() => {
+  const stops: Stop[] = [];
+  mapStore.stops.forEach((stop: Stop) => {
+    stops.push(stop);
   });
-}
+  return stops;
+});
 </script>
 
 <template>
@@ -75,39 +117,7 @@ function scrollToDataContainer() {
           v-for="route in routes"
           :key="route.id"
           :route="route"
-          @select-stop="
-            async (stop: Stop, routeID: RouteID) => {
-              try {
-                switch (mapStore.selectionMode) {
-                  case SelectionMode.Normal:
-                    await dataStore.selectStop(stop, routeID);
-                    dataStore.selectedDestination = null;
-                    break;
-                  case SelectionMode.Destination:
-                    await dataStore.selectDestination(stop, routeID);
-                    appStore.blocked = false;
-                    mapStore.selectionMode = SelectionMode.Normal;
-                    break;
-                  default:
-                    console.error('Invalid selection mode');
-                    return;
-                }
-                try {
-                  await dataStore.fetchData();
-                  scrollToDataContainer();
-                } catch (err) {
-                  // Since fetchData sets dataStore.error, let the div in DataPanel render it
-                }
-              } catch (err) {
-                toast.add({
-                  severity: 'error',
-                  summary: 'Error',
-                  detail: dataStore.toastMessage,
-                  life: 3000,
-                });
-              }
-            }
-          "
+          @select-stop="selectStop"
         />
         <RoutePolyline v-for="route in routes" :key="route.id" :route="route" />
       </l-map>
@@ -126,20 +136,29 @@ function scrollToDataContainer() {
             icon: 'pi pi-fw pi-cog',
             command: () =>
               dialog.open(MapSettingsDialog, {
-                props: {
-                  header: 'Display',
-                  style: {
-                    width: '16vw',
-                  },
-                  breakpoints: {
-                    '768px': '90vw',
-                  },
-                  modal: true,
-                },
+                props: smallDialogProps('Display Lines', true),
               }),
           },
         ]"
-      />
+      >
+        <template #end>
+          <Dropdown
+            filter
+            :options="stops"
+            optionLabel="name"
+            placeholder="Search stops"
+            @change="
+              async (event: DropdownChangeEvent) => {
+                const stop = event.value as Stop;
+                if (stop.routeIDs.size) {
+                  // Default to the stop's first known route ID
+                  selectStop(stop, stop.routeIDs.values().next().value);
+                }
+              }
+            "
+          />
+        </template>
+      </Menubar>
     </div>
   </Panel>
 </template>

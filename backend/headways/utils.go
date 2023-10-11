@@ -15,7 +15,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 
   "github.com/mbta-performance-dashboard/consts"
   "github.com/mbta-performance-dashboard/types"
@@ -227,27 +227,26 @@ func HandleCache(c *gin.Context, db *sql.DB, mutex *sync.Mutex) {
 	}
 
 	statement = "INSERT INTO headway (stop_id, route_id, prev_route_id, direction, " +
-		"current_dep_dt, previous_dep_dt, headway_time_sec, benchmark_headway_time_sec) VALUES"
+		"current_dep_dt, previous_dep_dt, headway_time_sec, benchmark_headway_time_sec) SELECT " +
+    "unnest($1::text[]) AS stop_id, " +
+    "unnest($2::text[]) AS route_id, " +
+    "unnest($3::text[]) AS prev_route_id, " +
+    "unnest($4::boolean[]) AS direction, " +
+    "TO_TIMESTAMP(unnest($5::int[])) AS current_dep_dt, " +
+    "TO_TIMESTAMP(unnest($6::int[])) AS previous_dep_dt, " +
+    "unnest($7::int[]) AS headway_time_sec, " +
+    "unnest($8::int[]) AS benchmark_headway_time_sec"
 
-	params = []any{}
-	var values []string = []string{}
-	for i := 0; i < len(headways); i++ {
-		start := (i * 8) + 1
-		values = append(
-			values,
-			fmt.Sprintf(
-				" ($%d, $%d, $%d, $%d, TO_TIMESTAMP($%d), TO_TIMESTAMP($%d), $%d, $%d)",
-				start,
-				start+1,
-				start+2,
-				start+3,
-				start+4,
-				start+5,
-				start+6,
-				start+7,
-			),
-		)
+  var paramStopIDs []string = []string{}
+  var paramRouteIDs []string = []string{}
+  var paramPrevRouteIDs []string = []string{}
+  var paramDirections []bool = []bool{}
+  var paramCurrentDepDts []int = []int{}
+  var paramPreviousDepDts []int = []int{}
+  var paramHeadwayTimeSecs []int = []int{}
+  var paramBenchmarkHeadwayTimeSecs []int = []int{}
 
+  for i := 0; i < len(headways); i++ {
 		convertedDirection, err := strconv.Atoi(headways[i].Direction)
 		if err != nil {
 			panic(fmt.Sprintf("Error converting direction to integer: %v", err))
@@ -269,23 +268,30 @@ func HandleCache(c *gin.Context, db *sql.DB, mutex *sync.Mutex) {
 			panic(fmt.Sprintf("Error converting benchmark headway time seconds to integer: %v", err))
 		}
 
-		params = append(
-			params,
-			[]any{
-				headways[i].StopID,
-				headways[i].RouteID,
-				headways[i].PrevRouteID,
-				convertedDirection == 1,
-				convertedCurrentDepDt,
-				convertedPreviousDepDt,
-				convertedHeadwayTimeSec,
-				convertedBenchmarkHeadwayTimeSec,
-			}...,
-		)
+    paramStopIDs = append(paramStopIDs, headways[i].StopID)
+    paramRouteIDs = append(paramRouteIDs, headways[i].RouteID)
+    paramPrevRouteIDs = append(paramPrevRouteIDs, headways[i].PrevRouteID)
+    paramDirections = append(paramDirections, convertedDirection == 1)
+    paramCurrentDepDts = append(paramCurrentDepDts, convertedCurrentDepDt)
+    paramPreviousDepDts = append(paramPreviousDepDts, convertedPreviousDepDt)
+    paramHeadwayTimeSecs = append(paramHeadwayTimeSecs, convertedHeadwayTimeSec)
+    paramBenchmarkHeadwayTimeSecs = append(
+      paramBenchmarkHeadwayTimeSecs,
+      convertedBenchmarkHeadwayTimeSec,
+    )
 	}
-	statement += strings.Join(values, ",")
 
-	_, err = db.Exec(statement, params...)
+	_, err = db.Exec(
+    statement,
+    pq.Array(paramStopIDs),
+    pq.Array(paramRouteIDs),
+    pq.Array(paramPrevRouteIDs),
+    pq.Array(paramDirections),
+    pq.Array(paramCurrentDepDts),
+    pq.Array(paramPreviousDepDts),
+    pq.Array(paramHeadwayTimeSecs),
+    pq.Array(paramBenchmarkHeadwayTimeSecs),
+  )
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"data": fmt.Sprintf("Error inserting headways: %v", err),

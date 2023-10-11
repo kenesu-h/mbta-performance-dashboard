@@ -15,7 +15,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 
   "github.com/mbta-performance-dashboard/consts"
   "github.com/mbta-performance-dashboard/types"
@@ -227,25 +227,22 @@ func HandleCache(c *gin.Context, db *sql.DB, mutex *sync.Mutex) {
 	}
 
 	statement = "INSERT INTO dwell (stop_id, route_id, direction, arr_dt, dep_dt, dwell_time_sec) " +
-    "VALUES"
+    "SELECT " +
+    "unnest($1::text[]) AS stop_id, " +
+    "unnest($2::text[]) AS route_id, " +
+    "unnest($3::boolean[]) AS direction, " +
+    "TO_TIMESTAMP(unnest($4::int[])) AS arr_dt, " +
+    "TO_TIMESTAMP(unnest($5::int[])) AS dep_dt, " +
+    "unnest($6::int[]) AS dwell_time_sec"
 
-	params = []any{}
-	var values []string = []string{}
+  var paramStopIDs []string = []string{}
+  var paramRouteIDs []string = []string{}
+  var paramDirections []bool = []bool{}
+  var paramArrDts []int = []int{}
+  var paramDepDts []int = []int{}
+  var paramDwellTimeSecs []int = []int{}
+
 	for i := 0; i < len(dwells); i++ {
-		start := (i * 6) + 1
-		values = append(
-			values,
-			fmt.Sprintf(
-				" ($%d, $%d, $%d, TO_TIMESTAMP($%d), TO_TIMESTAMP($%d), $%d)",
-				start,
-				start+1,
-				start+2,
-				start+3,
-				start+4,
-				start+5,
-			),
-		)
-
 		convertedDirection, err := strconv.Atoi(dwells[i].Direction)
 		if err != nil {
 			panic(fmt.Sprintf("Error converting direction to integer: %v", err))
@@ -263,21 +260,23 @@ func HandleCache(c *gin.Context, db *sql.DB, mutex *sync.Mutex) {
 			panic(fmt.Sprintf("Error converting dwell time seconds to integer: %v", err))
 		}
 
-		params = append(
-			params,
-			[]any{
-				dwells[i].StopID,
-				dwells[i].RouteID,
-				convertedDirection == 1,
-				convertedArrDt,
-				convertedDepDt,
-				convertedDwellTimeSec,
-			}...,
-		)
+    paramStopIDs = append(paramStopIDs, dwells[i].StopID)
+    paramRouteIDs = append(paramRouteIDs, dwells[i].RouteID)
+    paramDirections = append(paramDirections, convertedDirection == 1)
+    paramArrDts = append(paramArrDts, convertedArrDt)
+    paramDepDts = append(paramDepDts, convertedDepDt)
+    paramDwellTimeSecs = append(paramDwellTimeSecs, convertedDwellTimeSec)
 	}
-	statement += strings.Join(values, ",")
 
-	_, err = db.Exec(statement, params...)
+	_, err = db.Exec(
+    statement,
+    pq.Array(paramStopIDs),
+    pq.Array(paramRouteIDs),
+    pq.Array(paramDirections),
+    pq.Array(paramArrDts),
+    pq.Array(paramDepDts),
+    pq.Array(paramDwellTimeSecs),
+  )
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"data": fmt.Sprintf("Error inserting dwells: %v", err),
