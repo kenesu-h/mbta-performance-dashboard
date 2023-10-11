@@ -22,7 +22,7 @@
           <p>
             A common criticism was that candlestick graphs were (understandably)
             unreadable for your usual person who probably isn't familiar with
-            graphs using for finances and trading. They're still helpful for an
+            graphs used for finances and trading. They're still helpful for an
             in-depth view of each period's data, so they're now hidden by
             default and can be toggled using the "Toggle Detailed View" label in
             the legend.
