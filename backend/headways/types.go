@@ -44,7 +44,7 @@ func (h *Headway) RouteID() string {
   return h.BaseEntity.RouteID
 }
 
-
+// A HeadwayService represents a service that will fetch and store headways.
 type HeadwayService struct {
   types.BaseService
 }

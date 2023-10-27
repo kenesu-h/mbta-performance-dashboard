@@ -54,6 +54,9 @@ func (t *TravelTime) RouteID() string {
 
 // A LastCacheDatetime represents the last time data was cached for this origin-destination-route ID
 // combination.
+//
+// A different LastCacheDatetime is needed to accommodate the fact that there are two stop IDs
+// involved in the combination - not just one.
 type LastCacheDatetime struct {
 	FromStopID string    `json:"from_stop_id"`
 	ToStopID   string    `json:"to_stop_id"`
@@ -62,6 +65,7 @@ type LastCacheDatetime struct {
 }
 
 
+// A TravelTimeService represents a service that will fetch and store travel times.
 type TravelTimeService struct {
   types.BaseService
 }
@@ -96,7 +100,7 @@ func (s *TravelTimeService) FetchTravelTimesFromAPI(
   toStopIDs []string,
   routeID string,
 ) ([]*TravelTime, []error) {
-  datetimes, err := s.getLastCacheDatetimes(
+  datetimes, err := s.lastCacheDatetimes(
     tx,
     fromStopIDs,
     toStopIDs,
@@ -194,7 +198,7 @@ func (s *TravelTimeService) FetchTravelTimesFromAPI(
   return travelTimes, errs
 }
 
-func (s *TravelTimeService) getLastCacheDatetimes(
+func (s *TravelTimeService) lastCacheDatetimes(
   tx *sql.Tx,
   fromStopIDs []string,
   toStopIDs []string,
@@ -376,7 +380,7 @@ func (s *TravelTimeService) UpdateTravelTimeCacheDatetimes(
   toStopIDs []string,
   routeID string,
 ) error {
-  datetimes, err := s.getLastCacheDatetimes(
+  datetimes, err := s.lastCacheDatetimes(
     tx,
     fromStopIDs,
     toStopIDs,

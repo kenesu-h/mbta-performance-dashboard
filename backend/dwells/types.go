@@ -43,6 +43,7 @@ func (d *Dwell) RouteID() string {
 }
 
 
+// A DwellService represents a service that will fetch and store dwells.
 type DwellService struct {
   types.BaseService
 }

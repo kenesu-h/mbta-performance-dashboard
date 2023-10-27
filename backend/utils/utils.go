@@ -29,6 +29,10 @@ func PgPlaceholders(start int, end int) string {
 	return strings.Join(placeholders, ", ")
 }
 
+// SliceToAnySlice takes a generic slice and returns a new slice of any.
+//
+// There's no easy to way to quickly create a slice of any otherwise, so this is super helpful for
+// passing in multiple params into an SQL statement.
 func SliceToAnySlice[T any](slice []T) []any {
 	var anySlice []any = []any{}
 	for i := 0; i < len(slice); i++ {
@@ -111,6 +115,10 @@ func ValidateIDs(tx *sql.Tx, stopIDs []string, routeID string) error {
   return nil
 }
 
+// FetchFromAPI fetches generic entities from the MBTA Performance API.
+//
+// Fetches data from the API in week-long chunks starting from 30 days ago. If a chunk ends after
+// the start of today, then it will be cut short to accommodate for it.
 func FetchFromAPI[T types.Entity, U types.APIResponse[T]](
   tx *sql.Tx,
   stopIDs []string,
@@ -118,7 +126,7 @@ func FetchFromAPI[T types.Entity, U types.APIResponse[T]](
   lastCacheDatetimeTable string,
   endpoint string,
 ) ([]T, []error) {
-  datetimes, err := getLastCacheDatetimes(
+  datetimes, err := lastCacheDatetimes(
     tx,
     stopIDs,
     routeID,
@@ -212,7 +220,8 @@ func FetchFromAPI[T types.Entity, U types.APIResponse[T]](
   return entities, errs
 }
 
-func getLastCacheDatetimes(
+// lastCacheDatetimes gets the last cache datetimes from a provided table.
+func lastCacheDatetimes(
   tx *sql.Tx,
   stopIDs []string,
   routeID string,
@@ -250,6 +259,7 @@ func getLastCacheDatetimes(
   return datetimes, nil
 }
 
+// FetchFromRequest fetches a generic entity from a provided MBTA Performance API endpoint.
 func FetchFromRequest[T types.Entity, U types.APIResponse[T]](
   client http.Client,
   endpoint string,
@@ -292,6 +302,9 @@ func FetchFromRequest[T types.Entity, U types.APIResponse[T]](
   return apiRes.Entities(), errs
 }
 
+// Cache caches generic entities from the MBTA Performance API up to the last 30 days.
+//
+// The provided service must specifically define caching behavior.
 func Cache[T types.Entity](c *gin.Context, service types.EntityService[T]) {
 	stopIDs := strings.Split(c.DefaultQuery("stop_ids", ""), ",")
 	routeID := c.DefaultQuery("route_id", "")
@@ -348,6 +361,9 @@ func Cache[T types.Entity](c *gin.Context, service types.EntityService[T]) {
 	})
 }
 
+// Select selects a generic entity.
+//
+// The provided service must specifically define selection behavior.
 func Select[T types.Entity](c *gin.Context, service types.EntityService[T]) {
 	stopIDs := strings.Split(c.DefaultQuery("stop_ids", ""), ",")
 	routeID := c.DefaultQuery("route_id", "")
@@ -385,13 +401,14 @@ func Select[T types.Entity](c *gin.Context, service types.EntityService[T]) {
 	})
 }
 
+// UpdateCacheDatetimes updates the last cache datetimes to the start of today.
 func UpdateCacheDatetimes(
   tx *sql.Tx, 
   stopIDs []string, 
   routeID string, 
   lastCacheDatetimeTable string,
 ) error {
-  datetimes, err := getLastCacheDatetimes(
+  datetimes, err := lastCacheDatetimes(
     tx,
     stopIDs,
     routeID,
@@ -443,6 +460,7 @@ func UpdateCacheDatetimes(
   return nil
 }
 
+// DeleteOutdated deletes rows from the provided table whose dates are set to before 30 days ago.
 func DeleteOutdated(tx *sql.Tx, table string, dateColumn string) error {
   _, err := tx.Exec(fmt.Sprintf(
     "DELETE FROM %s WHERE %s < DATE_TRUNC('day', NOW() AT TIME ZONE 'America/New_York' - " +
