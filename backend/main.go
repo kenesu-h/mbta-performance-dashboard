@@ -17,6 +17,7 @@ import (
 	"github.com/mbta-performance-dashboard/headways"
 	"github.com/mbta-performance-dashboard/traveltimes"
 	"github.com/mbta-performance-dashboard/types"
+	"github.com/mbta-performance-dashboard/utils"
 )
 
 func main() {
@@ -39,7 +40,7 @@ func main() {
 	}
 	defer db.Close()
 
-	var cacheMutex sync.Mutex
+	var mutex sync.Mutex
 
 	r := gin.Default()
 	r.Use(cors.Default())
@@ -130,34 +131,37 @@ func main() {
 		})
 	})
 
+	headwayService := headways.NewService(db, &mutex)
 	// /cache/headway : stop_ids []string, route_id string
 	r.GET("/cache/headway", func(c *gin.Context) {
-		headways.HandleCache(c, db, &cacheMutex)
+		utils.Cache[*headways.Headway](c, headwayService)
 	})
 
 	// /headway : stop_ids []string, route_id string, start_datetime int, end_datetime int -> []Headway
 	r.GET("/headway", func(c *gin.Context) {
-		headways.HandleFetch(c, db)
+		utils.Select[*headways.Headway](c, headwayService)
 	})
 
+	dwellService := dwells.NewService(db, &mutex)
 	// /cache/dwell : stop_ids []string, route_id string
 	r.GET("/cache/dwell", func(c *gin.Context) {
-		dwells.HandleCache(c, db, &cacheMutex)
+		utils.Cache[*dwells.Dwell](c, dwellService)
 	})
 
 	// /dwell : stop_ids []string, route_id string, start_datetime int, end_datetime int -> []Dwell
 	r.GET("/dwell", func(c *gin.Context) {
-		dwells.HandleFetch(c, db)
+		utils.Select[*dwells.Dwell](c, dwellService)
 	})
 
+	travelTimeService := traveltimes.NewService(db, &mutex)
 	// /cache/travel_time : from_stop_ids []string, to_stop_ids []string, route_id string
 	r.GET("/cache/travel_time", func(c *gin.Context) {
-		traveltimes.HandleCache(c, db, &cacheMutex)
+		traveltimes.CacheTravelTimes(c, travelTimeService)
 	})
 
 	// /travel_time : from_stop_ids []string, to_stop_ids []string, route_id string -> []TravelTime
 	r.GET("/travel_time", func(c *gin.Context) {
-		traveltimes.HandleFetch(c, db)
+		traveltimes.SelectTravelTimes(c, travelTimeService)
 	})
 
 	r.Run()
